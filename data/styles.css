@@ -1,0 +1,241 @@
+/* Centrage de la page */
+body {
+    font-family: Arial, sans-serif;
+    display: flex;
+    justify-content: center;    /* Centrer horizontalement */
+    align-items: center;        /* Centrer verticalement */
+    min-height: 100vh;          /* Assure que le contenu occupe toute la hauteur */
+    margin: 0;
+    background-color: #1d1818;  /* Fond de la page */
+    flex-direction: column;     /* Affichage en colonne sur les petits écrans */
+    padding: 20px;              /* Un peu d'espace autour du contenu */
+}
+
+/* Conteneur pour les racks */
+.lists-container {
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;    /* Alignement des racks au début */
+    gap: 50px;                  /* Espacement entre les racks */
+    flex-wrap: wrap;            /* Permet aux racks de se placer verticalement si l'espace est insuffisant */
+    max-width: 100%;            /* Empêche le dépassement horizontal sur petits écrans */
+    padding: 20px;
+}
+
+/* Style des racks */
+.list-group {
+    background-size: cover;
+    background-image: url('rack2.jpg');  /* Image de fond */
+    border: 1px solid #1d1d1d;
+    width: 600px;                        /* Largeur des racks */
+    min-height: 300px;
+    margin: 0 50px;
+    display: inline-block;
+    padding: 35px;
+    box-sizing: border-box;              /* Inclure le padding dans la taille */
+}
+
+/* Style des éléments dans chaque rack */
+.list-group-item {
+    padding: 8px 12px;
+    margin-top: 10px;
+    margin-bottom: 4px;     
+    background-color: transparent;       /* Fond transparent */
+    cursor: grab;
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    cursor: grab;
+}
+
+/* Images dans les éléments */
+.list-group-item img {
+    width: 100%;  /* Adapter la taille des images à la largeur du conteneur */
+    height: auto;
+}
+
+/* Style de l'en-tête de la page */
+.page-header {
+    position: fixed;                     /* L'en-tête reste en haut de la page */
+    top: 0;
+    left: 0;
+    width: 100%;                         /* Occupe toute la largeur */
+    text-align: center;
+    padding: 20px;
+    background-color: transparent;
+    color: #00ff00;
+    font-family: 'Courier New', monospace;
+    text-shadow: 0 0 10px #00ff00, 0 0 20px #00ff00;
+    z-index: 1000;
+}
+
+/* Style du titre (h1) */
+.page-header h1 {
+    font-size: 48px;
+    letter-spacing: 3px;
+    margin: 0;
+}
+
+/* Effet de chute du code Matrix 
+@keyframes matrix-fall {
+    0% {
+        transform: translateY(-100%);
+    }
+    100% {
+        transform: translateY(100%);
+    }
+}
+
+.page-header::before {
+    content: '0 1 1 0 a b c d e f @ # $ % & *';
+    position: absolute;
+    width: 100%;
+    top: 0;
+    left: 0;
+    height: 100%;
+    z-index: -1;
+    font-size: 24px;
+    font-family: 'Courier New', monospace;
+    color: rgba(0, 255, 0, 0.2);
+    animation: matrix-fall 10s linear infinite;
+    white-space: nowrap;
+}*/
+
+/* Media query pour petits écrans */
+@media screen and (max-width: 768px) {
+    .list-group {
+        width: 100%;                  /* Les racks prennent toute la largeur disponible sur mobile */
+        max-width: 100%;               /* Ne dépasse pas la largeur de l'écran */
+        margin: 20px 0;                /* Espacement vertical entre les racks sur mobile */
+    }
+
+    .lists-container {
+        flex-direction: column;        /* Les racks s'empilent verticalement sur mobile */
+        gap: 20px;                     /* Réduire l'espacement entre les racks sur mobile */
+    }
+
+    .page-header h1 {
+        font-size: 36px;               /* Taille du titre plus petite sur mobile */
+    }
+}
+
+
+/* Conteneur de l'icône de la roue crantée */
+.settings-icon-container {
+    position: absolute;
+    top: 20px;
+    left: 20px;
+}
+
+.settings-icon {
+    width: 40px;
+    height: 40px;
+    cursor: pointer;
+}
+
+/* Style de la modale */
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 1;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5); /* Transparent noir */
+    backdrop-filter: blur(5px); /* Effet flou */
+}
+
+.modal-content {
+    background-color: #fefefe;
+    margin: 15% auto;
+    padding: 20px;
+    border: 1px solid #888;
+    width: 300px;
+    border-radius: 8px;
+    position: relative;
+    text-align: center;
+}
+
+
+.modal .selector-container {
+    display: flex;
+    justify-content: center; /* Centrer horizontalement */
+    align-items: center;     /* Centrer verticalement */
+    margin-top: 20px;        /* Ajouter un espace au-dessus si nécessaire */
+}
+
+.modal .selector-container button {
+    background-color: #4CAF50; /* Couleur verte */
+    color: white;              /* Couleur du texte blanche */
+    border: none;
+    font-size: 24px;
+    padding: 10px 20px;
+    margin: 0 10px; /* Espacement entre les boutons */
+    cursor: pointer;
+}
+
+.modal .selector-container #value-display {
+    font-size: 24px;
+    margin: 0 10px;
+}
+
+/* Bouton close (croix) */
+.close {
+    position: absolute;
+    top: 10px;
+    right: 15px;
+    color: #aaa;
+    font-size: 28px;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.close:hover,
+.close:focus {
+    color: #000;
+}
+
+/* Bouton dans la modale */
+button {
+    padding: 10px 20px;
+    background-color: #4CAF50;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    margin-top: 20px;
+}
+
+button:hover {
+    background-color: #45a049;
+}
+
+.svg-icon {
+    transition: transform 0.3s ease, fill 0.3s ease; /* Ajoute une transition douce */
+    width: 30px; /* Ajustez la taille selon vos besoins */
+    height: 30px; /* Ajustez la taille selon vos besoins */
+    fill: black; /* Couleur par défaut */
+}
+
+.svg-icon:hover {
+    transform: rotate(180deg); /* Fait tourner le SVG de 180 degrés au survol */
+    fill: green; /* Change la couleur en vert au survol */
+}
+
+.selector-container {
+    display: flex;
+    align-items: center;
+    margin: 10px 0;
+}
+
+button {
+    padding: 5px 10px;
+    margin: 0 5px;
+    cursor: pointer;
+}
+
+#value-display {
+    width: 30px; /* Ajuste la largeur si nécessaire */
+    text-align: center;
+}
