@@ -87,42 +87,67 @@ void setup() {
   });
 
 
-  // Route pour recevoir l'ordre de la liste 2 via une requête POST JSON
-  server.on("/update-order", HTTP_POST, [](AsyncWebServerRequest * request) {}, NULL,
-  [](AsyncWebServerRequest * request, uint8_t *data, size_t len, size_t index, size_t total) {
-    // Lire le corps de la requête
-    String body = "";
-    for (size_t i = 0; i < len; i++) {
-      body += (char)data[i];
-    }
+ // Route pour recevoir l'ordre de la liste
+    server.on("/update-order", HTTP_POST, [](AsyncWebServerRequest *request) {}, NULL,
+    [](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total) {
+        String body = "";
+        for (size_t i = 0; i < len; i++) {
+            body += (char)data[i];
+        }
 
-    Serial.println("Received body:");
-    Serial.println(body);
+        Serial.println("Received body:");
+        Serial.println(body);
 
-    // Analyse du JSON
-    DynamicJsonDocument doc(1024);
-    DeserializationError error = deserializeJson(doc, body);
+        DynamicJsonDocument doc(1024);
+        DeserializationError error = deserializeJson(doc, body);
 
-    if (error) {
-      Serial.print(F("deserializeJson() failed: "));
-      Serial.println(error.f_str());
-      request->send(400, "application/json", "{\"status\":\"error\", \"message\": \"Invalid JSON format\"}");
-      return;
-    }
+        if (error) {
+            Serial.print(F("deserializeJson() failed: "));
+            Serial.println(error.f_str());
+            request->send(400, "application/json", "{\"status\":\"error\", \"message\": \"Invalid JSON format\"}");
+            return;
+        }
 
-    // Récupérer l'ordre des éléments de la liste 2
-    JsonArray order = doc["order"];
-    Serial.println("Nouvel ordre de la liste 2:");
-    for (String item : order) {
-      Serial.println(item);
-    }
+        // Récupérer l'ordre des éléments de la liste 2
+        JsonArray order = doc["order"];
+        String config = "";
+        String muteConfig = "";
 
-    // Clignotement de la LED lorsque les données sont envoyées
-    blinkLED();
+        for (JsonVariant item : order) {
+            String effect = item.as<String>();
+            Serial.println(effect);
 
-    // Réponse
-    request->send(200, "application/json", "{\"status\":\"success\"}");
-  });
+            // Construire la configuration binaire en fonction de la table de vérité
+            if (effect == "1") config += "10", muteConfig += "11"; // Effet 1
+            else if (effect == "2") config += "01", muteConfig += "11"; // Effet 2
+            else if (effect == "3") config += "11", muteConfig += "11"; // Effet 3
+        }
+
+        // Compléter la configuration avec l'insert et mute pour les sorties non utilisées
+        config += "11"; // Bits pour l'insert (toujours actifs)
+        while (muteConfig.length() < 8) muteConfig += "00"; // Bits "00" pour les sorties mutées
+
+        // Convertir les configurations binaires en octets
+        uint8_t presetConfigByte = strtol(config.c_str(), nullptr, 2);
+        uint8_t muteConfigByte = strtol(muteConfig.c_str(), nullptr, 2);
+
+        // Envoi de la commande NewPreset (commande 19)
+        SendRsBuffer[0] = 1;  // Numéro de preset
+        SendRsBuffer[1] = presetConfigByte;  // Configuration binaire
+        HW_SendRsV3(NewPreset, 0, 2);
+
+        // Envoi de la commande GpiOUTChange (commande 21)
+        SendRsBuffer[0] = 1;  // Numéro
+        SendRsBuffer[1] = muteConfigByte;  // Configuration de mute
+        HW_SendRsV3(GpiOUTChange, 0, 2);
+
+        // Clignotement de la LED pour indiquer la réception
+        blinkLED();
+
+        // Répondre à la requête
+        request->send(200, "application/json", "{\"status\":\"success\"}");
+    });
+
 
   // Route pour recevoir la commande AboutVersion
   server.on("/send-about-version", HTTP_POST, [](AsyncWebServerRequest * request) {
@@ -180,4 +205,23 @@ void blinkLED() {
     digitalWrite(ledPin, LOW);    // Éteindre la LED
     delay(100);                   // Attendre 200 ms
   }
+}
+
+
+// Fonction de configuration de la matrice en fonction de l'ordre des effets
+void configureMatrix(String order) {
+    // Exemple de traitement de l'ordre pour appliquer la table de vérité
+    Serial.println("Configuring matrix with order: " + order);
+    String config = ""; // Configuration binaire en fonction de la table de vérité
+
+    // Ajout du calcul binaire selon l'ordre
+    // Par exemple, ajouter les valeurs en fonction de la table de vérité
+    if (order.indexOf("1") >= 0) config += "10"; // Effet 1
+    if (order.indexOf("2") >= 0) config += "01"; // Effet 2
+    if (order.indexOf("3") >= 0) config += "11"; // Effet 3
+    config += "11"; // Insert (toujours actif)
+
+    // Convertir et envoyer la configuration
+    uint8_t byteConfig = strtol(config.c_str(), nullptr, 2);
+    mySerial.write(byteConfig);
 }
