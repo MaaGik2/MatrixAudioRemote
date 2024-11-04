@@ -136,6 +136,8 @@ void setup() {
         SendRsBuffer[1] = presetConfigByte;  // Configuration binaire
         HW_SendRsV3(NewPreset, 0, 2);
 
+        delay(1000); // Délai entre les envois
+
         // Envoi de la commande GpiOUTChange (commande 21)
         SendRsBuffer[0] = 1;  // Numéro
         SendRsBuffer[1] = muteConfigByte;  // Configuration de mute
