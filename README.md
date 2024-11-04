@@ -6,7 +6,7 @@ Matrix Audio Selector
 
 Description
 
-Audio Matrix 4 In/Out Stereo Symmetric +20dBu
+Audio Analog Matrix 4 In/Out Stereo Symmetric +20dBu
 
 A flexible audio matrix with 4 stereo inputs and outputs at symmetric +20dBu. This project includes a web interface with drag-and-drop functionality, allowing users to organize and select hardware effects seamlessly.
 
