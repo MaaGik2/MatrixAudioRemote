@@ -106,3 +106,138 @@ function sendChangePresetCommand() {
         console.error("Error:", error);
     });
 }
+
+// Fonction pour envoyer la commande de reset
+function sendResetCommand() {
+    fetch("/reset", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ command: "reset" })
+    })
+    .then(response => response.json())
+    .then(data => console.log("Reset command sent:", data))
+    .catch((error) => console.error("Error:", error));
+}
+
+// Fonctions pour la modal d'ajout d'effet
+function openAddEffectModal() {
+    document.getElementById("add-effect-modal").style.display = "block";
+}
+
+function closeAddEffectModal() {
+    document.getElementById("add-effect-modal").style.display = "none";
+}
+
+async function searchImages() {
+    const searchTerm = document.getElementById("image-search").value;
+    const resultsContainer = document.getElementById("search-results");
+    resultsContainer.innerHTML = "Recherche en cours...";
+
+    try {
+        // Utilisation de l'API Unsplash (vous devrez obtenir une clé API)
+        const response = await fetch(`https://api.unsplash.com/search/photos?query=${searchTerm}&client_id=VOTRE_CLE_API`);
+        const data = await response.json();
+
+        resultsContainer.innerHTML = "";
+        data.results.forEach(image => {
+            const div = document.createElement("div");
+            div.className = "search-result-item";
+            div.innerHTML = `<img src="${image.urls.small}" alt="${image.alt_description}">`;
+            div.onclick = () => addImageToRack(image.urls.regular);
+            resultsContainer.appendChild(div);
+        });
+    } catch (error) {
+        resultsContainer.innerHTML = "Erreur lors de la recherche d'images";
+        console.error("Error:", error);
+    }
+}
+
+function addImageFromUrl() {
+    const url = document.getElementById("manual-url").value;
+    if (url) {
+        addImageToRack(url);
+    }
+}
+
+// Gestion du drag and drop
+function setupDragAndDrop() {
+    const dropZone = document.getElementById('drop-zone');
+
+    // Empêcher le comportement par défaut
+    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+        dropZone.addEventListener(eventName, preventDefaults, false);
+        document.body.addEventListener(eventName, preventDefaults, false);
+    });
+
+    // Gestion des effets visuels
+    ['dragenter', 'dragover'].forEach(eventName => {
+        dropZone.addEventListener(eventName, highlight, false);
+    });
+
+    ['dragleave', 'drop'].forEach(eventName => {
+        dropZone.addEventListener(eventName, unhighlight, false);
+    });
+
+    // Gestion du drop
+    dropZone.addEventListener('drop', handleDrop, false);
+}
+
+function preventDefaults(e) {
+    e.preventDefault();
+    e.stopPropagation();
+}
+
+function highlight(e) {
+    document.getElementById('drop-zone').classList.add('drag-over');
+}
+
+function unhighlight(e) {
+    document.getElementById('drop-zone').classList.remove('drag-over');
+}
+
+function handleDrop(e) {
+    const dt = e.dataTransfer;
+    const files = dt.files;
+
+    handleFiles(files);
+}
+
+function handleFiles(files) {
+    const file = files[0]; // On ne gère qu'un fichier à la fois
+    
+    if (file && file.type.startsWith('image/')) {
+        const reader = new FileReader();
+        
+        reader.onload = function(e) {
+            addImageToRack(e.target.result);
+        }
+        
+        reader.readAsDataURL(file);
+    } else {
+        alert('Veuillez déposer une image valide');
+    }
+}
+
+function addImageToRack(imageUrl) {
+    const list = document.getElementById("shared-list-1");
+    const newId = list.children.length; // Générer un nouvel ID
+    
+    const newEffect = document.createElement("div");
+    newEffect.className = "list-group-item";
+    newEffect.setAttribute("data-id", newId);
+    newEffect.innerHTML = `<img src="${imageUrl}" alt="Effect ${newId}">`;
+    
+    // Insérer avant la zone de drop
+    list.insertBefore(newEffect, list.lastElementChild);
+}
+
+// Initialiser le drag and drop au chargement de la page
+document.addEventListener('DOMContentLoaded', setupDragAndDrop);
+
+// Fermer la modal si on clique en dehors
+window.onclick = function(event) {
+    const addEffectModal = document.getElementById("add-effect-modal");
+    if (event.target === addEffectModal) {
+        closeAddEffectModal();
+    }
+}

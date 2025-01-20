@@ -8,6 +8,7 @@
 // Command Standart
 
 #define AboutVersion                  6
+#define Reset                         22
 #define PresetChange                  18
 #define NewPreset                     19
 #define GpiINChange                   20

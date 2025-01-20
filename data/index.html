@@ -38,6 +38,12 @@
             <div class="list-group-item" data-id="5">
                 <img src="Korg-A3.jpg" alt="Korg-A3">
             </div>
+            <div class="list-group-item drop-zone" id="drop-zone">
+                <div class="drop-content">
+                    <span class="plus-icon">+</span>
+                    <p>Glissez une image ici</p>
+                </div>
+            </div>
         </div>
 
         <div id="shared-list-2" class="list-group"></div>
@@ -57,8 +63,34 @@
                 <button id="increase" onclick="changeValue(1)">&#43;</button>
             </div>
             
+             <!-- Conteneur pour centrer les boutons -->
+        <div class="button-container">
             <button onclick="sendChangePresetCommand()">Change Preset</button>
+            <button onclick="sendResetCommand()">Reset</button>
+        </div>
 
+        </div>
+    </div>
+
+    <!-- Après la div settings-modal -->
+    <div id="add-effect-modal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeAddEffectModal()">&times;</span>
+            <h2>Ajouter un effet</h2>
+            
+            <div class="search-container">
+                <input type="text" id="image-search" placeholder="Rechercher un effet...">
+                <button onclick="searchImages()">Rechercher</button>
+            </div>
+
+            <div id="search-results" class="search-results">
+                <!-- Les résultats de recherche seront affichés ici -->
+            </div>
+
+            <div class="manual-url-container">
+                <input type="text" id="manual-url" placeholder="Ou collez l'URL d'une image...">
+                <button onclick="addImageFromUrl()">Ajouter</button>
+            </div>
         </div>
     </div>
 

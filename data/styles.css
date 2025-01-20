@@ -239,3 +239,118 @@ button {
     width: 30px; /* Ajuste la largeur si nécessaire */
     text-align: center;
 }
+
+.button-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-top: 10px;
+}
+
+.button-container button {
+    width: 150px; /* Ajuste la largeur si nécessaire */
+    margin: 5px 0;
+}
+
+/* Style pour la modal d'ajout d'effet */
+.search-container {
+    margin: 20px 0;
+    display: flex;
+    gap: 10px;
+}
+
+#image-search {
+    flex: 1;
+    padding: 8px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+}
+
+.search-results {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 10px;
+    max-height: 400px;
+    overflow-y: auto;
+    margin: 20px 0;
+}
+
+.search-result-item {
+    position: relative;
+    cursor: pointer;
+    border: 2px solid transparent;
+    transition: border-color 0.3s;
+}
+
+.search-result-item:hover {
+    border-color: #4CAF50;
+}
+
+.search-result-item img {
+    width: 100%;
+    height: 150px;
+    object-fit: cover;
+}
+
+.manual-url-container {
+    margin-top: 20px;
+    display: flex;
+    gap: 10px;
+}
+
+#manual-url {
+    flex: 1;
+    padding: 8px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+}
+
+.add-effect {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100px;
+    background-color: rgba(255, 255, 255, 0.1);
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+
+.add-effect:hover {
+    background-color: rgba(255, 255, 255, 0.2);
+}
+
+.plus-icon {
+    font-size: 40px;
+    color: #4CAF50;
+}
+
+.drop-zone {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100px;
+    background-color: rgba(255, 255, 255, 0.1);
+    border: 2px dashed #4CAF50;
+    transition: all 0.3s ease;
+}
+
+.drop-zone.drag-over {
+    background-color: rgba(76, 175, 80, 0.2);
+    border-color: #45a049;
+}
+
+.drop-content {
+    text-align: center;
+    color: #4CAF50;
+}
+
+.drop-content p {
+    margin: 5px 0;
+    font-size: 14px;
+}
+
+.plus-icon {
+    font-size: 24px;
+    display: block;
+    margin-bottom: 5px;
+}
