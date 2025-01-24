@@ -354,3 +354,44 @@ button {
     display: block;
     margin-bottom: 5px;
 }
+
+/* Modifier les styles des contrôles d'en-tête */
+.header-controls {
+    position: absolute;
+    left: 20px;
+    display: flex;
+    gap: 20px;
+    align-items: center;
+}
+
+.settings-icon-container,
+.reset-icon-container {
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    background-color: rgba(255, 255, 255, 0.1);
+    border-radius: 50%;
+    padding: 8px;
+    transition: background-color 0.3s ease;
+}
+
+.settings-icon-container:hover,
+.reset-icon-container:hover {
+    background-color: rgba(255, 255, 255, 0.2);
+}
+
+.svg-icon {
+    width: 24px;
+    height: 24px;
+    transition: transform 0.3s ease, fill 0.3s ease;
+    fill: #4CAF50;
+}
+
+.settings-icon-container:hover .svg-icon,
+.reset-icon-container:hover .svg-icon {
+    transform: rotate(180deg);
+    fill: #45a049;
+}

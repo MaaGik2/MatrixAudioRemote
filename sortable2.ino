@@ -10,6 +10,13 @@ const char* password = "Coolight2016@Stpol@Ruche";
 // LED sur GPIO2
 const int ledPin = 2;
 
+const int NUM_LEDS = 4;
+const int LED_PINS[NUM_LEDS] = {15, 4, 22, 23};  // D2, D4, D22, D23
+bool ledStates[NUM_LEDS] = {false, false, false, false};
+unsigned long previousMillis = 0;
+const long interval = 100;  // Intervalle de 100ms entre chaque LED
+int currentLed = 0;
+
 AsyncWebServer server(80);
 
 void setup() {
