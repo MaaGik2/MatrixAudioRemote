@@ -19,6 +19,36 @@ int currentLed = 0;
 
 AsyncWebServer server(80);
 
+// Structure pour stocker les configurations
+struct EffectConfig {
+    const char* order;
+    uint8_t muteConfig;
+};
+
+// Table de vérité pour toutes les configurations possibles
+const EffectConfig MUTE_CONFIGS[] = {
+    // Un seul effet
+    {"1", 0b00100111},    // SPX seul
+    {"2", 0b01101100},    // DIGI seul
+    {"3", 0b10110100},    // BBE seul
+    
+    // Deux effets
+    {"12", 0b01100011},   // SPX -> DIGI
+    {"13", 0b10000111},   // SPX -> BBE
+    {"21", 0b00110011},   // DIGI -> SPX
+    {"23", 0b10010110},   // DIGI -> BBE
+    {"31", 0b00110100},   // BBE -> SPX
+    {"32", 0b01110100},   // BBE -> DIGI
+    
+    // Trois effets
+    {"123", 0b10010110},  // SPX -> DIGI -> BBE
+    {"132", 0b01100011},  // SPX -> BBE -> DIGI
+    {"213", 0b10000111},  // DIGI -> SPX -> BBE
+    {"231", 0b00110100},  // DIGI -> BBE -> SPX
+    {"312", 0b01100011},  // BBE -> SPX -> DIGI
+    {"321", 0b00110011}   // BBE -> DIGI -> SPX
+};
+
 void setup() {
 
   // Configurer GPIO2 comme sortie pour la LED
@@ -88,7 +118,6 @@ void setup() {
     request->send(SPIFFS, "/Korg-A3.jpg", "image/x-icon");
   });
 
-
   server.on("/aphex-204.jpg", HTTP_GET, [](AsyncWebServerRequest * request) {
     request->send(SPIFFS, "/aphex-204.jpg", "image/x-icon");
   });
@@ -118,75 +147,18 @@ void setup() {
     // Récupérer l'ordre des éléments de la liste 2
     JsonArray order = doc["order"];
     
-    // Initialisation du muteConfig par défaut : chaque out_x sur in_x
-    String muteConfig = "11100100"; // "11 10 01 00" - Chaque canal bouclé sur lui-même
-                                   // out4->in4 (11)
-                                   // out3->in3 (10)
-                                   // out2->in2 (01)
-                                   // out1->in1 (00)
-
-    // Réinitialiser l'état des LEDs
+    // Réinitialiser l'état des LEDs et marquer tous les effets comme non utilisés
+    bool effectUsed[NUM_LEDS] = {false, false, false};
     for(int i = 0; i < NUM_LEDS; i++) {
         ledStates[i] = false;
         digitalWrite(LED_PINS[i], LOW);
     }
 
-    // Si le rack de droite n'est pas vide, appliquer le routage spécifique
-    if (order.size() > 0) {
-        // Allumer les LEDs des effets utilisés
-        for(size_t i = 0; i < order.size(); i++) {
-            String effect = order[i].as<String>();
-            int effectNum = effect.toInt();
-            
-            if(effectNum > 0 && effectNum <= NUM_LEDS) {
-                ledStates[effectNum - 1] = true;
-                digitalWrite(LED_PINS[effectNum - 1], HIGH);
-            }
-        }
-
-        // Configurer le routage
-        String effect = order[0].as<String>();
-        int effectNum = effect.toInt();
-        
-        // Configurer out4_pc vers l'entrée du premier effet
-        switch(effectNum) {
-            case 1: // SPX (in1) : 00 pour out4
-                muteConfig.setCharAt(7, '0');
-                muteConfig.setCharAt(6, '0');
-                // Configurer la sortie de SPX vers in4_pc
-                muteConfig.setCharAt(1, '1');
-                muteConfig.setCharAt(0, '1');
-                break;
-            case 2: // DIGI (in2) : 01 pour out4
-                muteConfig.setCharAt(7, '0');
-                muteConfig.setCharAt(6, '1');
-                // Configurer la sortie de DIGI vers in4_pc
-                muteConfig.setCharAt(3, '1');
-                muteConfig.setCharAt(2, '1');
-                break;
-            case 3: // BBE (in3) : 10 pour out4
-                muteConfig.setCharAt(7, '1');
-                muteConfig.setCharAt(6, '0');
-                // Configurer la sortie de BBE vers in4_pc
-                muteConfig.setCharAt(5, '1');
-                muteConfig.setCharAt(4, '1');
-                break;
-        }
-    }
-
-    // Convertir la configuration binaire en octet
-    String reversedMuteConfig = "";
-    for(int i = 7; i >= 0; i--) {
-        reversedMuteConfig += muteConfig[i];
-    }
-    uint8_t muteConfigByte = strtol(reversedMuteConfig.c_str(), nullptr, 2);
+    // Obtenir la configuration depuis updateEffects
+    uint8_t muteConfigByte = updateEffects(order);
 
     // Debug: Afficher les valeurs
     Serial.println("-------- Debug Values --------");
-    Serial.print("muteConfig (binary): ");
-    Serial.println(muteConfig);
-    Serial.print("reversedMuteConfig (binary): ");
-    Serial.println(reversedMuteConfig);
     Serial.print("muteConfigByte (decimal): ");
     Serial.println(muteConfigByte);
     Serial.print("muteConfigByte (hex): 0x");
@@ -195,14 +167,10 @@ void setup() {
 
     // Envoi de la commande NewPreset
     SendRsBuffer[0] = 1;  // Numéro de preset
-    SendRsBuffer[1] = muteConfigByte;  // Configuration binaire inversée
- 
+    SendRsBuffer[1] = muteConfigByte;
+    HW_SendRsV3(NewPreset, 0, 2);
 
- 
-
-     HW_SendRsV3(NewPreset, 0, 2);
-
- // Afficher la trame complète avant l'envoi
+    // Afficher la trame complète avant l'envoi
     Serial.println("Trame HW_SendRs complète (hex):");
     Serial.print("Command: 0x");
     Serial.println(NewPreset, HEX);
@@ -303,20 +271,40 @@ void blinkLED() {
 }
 
 
-// Fonction de configuration de la matrice en fonction de l'ordre des effets
-void configureMatrix(String order) {
-  // Exemple de traitement de l'ordre pour appliquer la table de vérité
-  Serial.println("Configuring matrix with order: " + order);
-  String config = ""; // Configuration binaire en fonction de la table de vérité
+// Fonction pour obtenir la configuration en fonction de l'ordre des effets
+uint8_t getMuteConfig(const JsonArray& order) {
+    if (order.size() == 0) return 0b11100100;
+    
+    String orderStr = "";
+    for(JsonVariant v : order) {
+        orderStr += v.as<String>();
+    }
+    
+    for(const EffectConfig& config : MUTE_CONFIGS) {
+        if (orderStr == config.order) {
+            return config.muteConfig;
+        }
+    }
+    
+    return 0b11100100;
+}
 
-  // Ajout du calcul binaire selon l'ordre
-  // Par exemple, ajouter les valeurs en fonction de la table de vérité
-  if (order.indexOf("1") >= 0) config += "10"; // Effet 1
-  if (order.indexOf("2") >= 0) config += "01"; // Effet 2
-  if (order.indexOf("3") >= 0) config += "11"; // Effet 3
-  config += "11"; // Insert (toujours actif)
-
-  // Convertir et envoyer la configuration
-  uint8_t byteConfig = strtol(config.c_str(), nullptr, 2);
-  mySerial.write(byteConfig);
+uint8_t updateEffects(const JsonArray& order) {
+    // Réinitialiser les LEDs
+    for(int i = 0; i < NUM_LEDS; i++) {
+        ledStates[i] = false;
+        digitalWrite(LED_PINS[i], LOW);
+    }
+    
+    // Allumer les LEDs des effets utilisés
+    for(JsonVariant v : order) {
+        int effectNum = v.as<String>().toInt();
+        if(effectNum > 0 && effectNum <= NUM_LEDS) {
+            ledStates[effectNum - 1] = true;
+            digitalWrite(LED_PINS[effectNum - 1], HIGH);
+        }
+    }
+    
+    // Obtenir et retourner la configuration de routage
+    return getMuteConfig(order);
 }
