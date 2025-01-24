@@ -225,7 +225,10 @@ function addImageToRack(imageUrl) {
     const newEffect = document.createElement("div");
     newEffect.className = "list-group-item";
     newEffect.setAttribute("data-id", newId);
-    newEffect.innerHTML = `<img src="${imageUrl}" alt="Effect ${newId}">`;
+    newEffect.innerHTML = `
+        <span class="element-number">${newId}</span>
+        <img src="${imageUrl}" alt="Effect ${newId}">
+    `;
     
     // Insérer avant la zone de drop
     list.insertBefore(newEffect, list.lastElementChild);
@@ -240,4 +243,51 @@ window.onclick = function(event) {
     if (event.target === addEffectModal) {
         closeAddEffectModal();
     }
+}
+
+// Ajouter cette fonction
+function resetLayout() {
+    // Récupérer tous les éléments du rack de droite
+    const rightRack = document.getElementById('shared-list-2');
+    const leftRack = document.getElementById('shared-list-1');
+    
+    // Stocker temporairement tous les éléments dans un tableau
+    const allElements = [];
+    
+    // Récupérer les éléments du rack de droite
+    while (rightRack.children.length > 0) {
+        allElements.push(rightRack.children[0]);
+        rightRack.children[0].remove();
+    }
+    
+    // Récupérer les éléments du rack de gauche (sauf la zone de drop)
+    const dropZone = leftRack.querySelector('.drop-zone');
+    while (leftRack.children.length > 1) { // > 1 car on garde la zone de drop
+        allElements.push(leftRack.children[0]);
+        leftRack.children[0].remove();
+    }
+    
+    // Trier les éléments par leur data-id
+    allElements.sort((a, b) => {
+        const idA = parseInt(a.getAttribute('data-id'));
+        const idB = parseInt(b.getAttribute('data-id'));
+        return idA - idB;
+    });
+    
+    // Remettre tous les éléments dans le rack de gauche dans l'ordre
+    allElements.forEach(element => {
+        leftRack.insertBefore(element, dropZone);
+    });
+
+    // Envoyer l'ordre vide au serveur pour mettre à jour les LEDs
+    fetch('/update-order', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ order: [] })
+    })
+    .then(response => response.json())
+    .then(data => console.log('Reset success:', data))
+    .catch(error => console.error('Reset error:', error));
 }

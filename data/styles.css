@@ -46,6 +46,7 @@ body {
     background-position: center;
     background-repeat: no-repeat;
     cursor: grab;
+    position: relative; /* Pour le positionnement absolu du numéro */
 }
 
 /* Images dans les éléments */
@@ -76,31 +77,6 @@ body {
     margin: 0;
 }
 
-/* Effet de chute du code Matrix 
-@keyframes matrix-fall {
-    0% {
-        transform: translateY(-100%);
-    }
-    100% {
-        transform: translateY(100%);
-    }
-}
-
-.page-header::before {
-    content: '0 1 1 0 a b c d e f @ # $ % & *';
-    position: absolute;
-    width: 100%;
-    top: 0;
-    left: 0;
-    height: 100%;
-    z-index: -1;
-    font-size: 24px;
-    font-family: 'Courier New', monospace;
-    color: rgba(0, 255, 0, 0.2);
-    animation: matrix-fall 10s linear infinite;
-    white-space: nowrap;
-}*/
-
 /* Media query pour petits écrans */
 @media screen and (max-width: 768px) {
     .list-group {
@@ -118,7 +94,6 @@ body {
         font-size: 36px;               /* Taille du titre plus petite sur mobile */
     }
 }
-
 
 /* Conteneur de l'icône de la roue crantée */
 .settings-icon-container {
@@ -213,8 +188,8 @@ button:hover {
 
 .svg-icon {
     transition: transform 0.3s ease, fill 0.3s ease; /* Ajoute une transition douce */
-    width: 30px; /* Ajustez la taille selon vos besoins */
-    height: 30px; /* Ajustez la taille selon vos besoins */
+    width: 20px; /* Réduire légèrement la taille */
+    height: 20px;
     fill: black; /* Couleur par défaut */
 }
 
@@ -357,11 +332,13 @@ button {
 
 /* Modifier les styles des contrôles d'en-tête */
 .header-controls {
-    position: absolute;
+    position: fixed;
+    top: 20px;
     left: 20px;
     display: flex;
     gap: 20px;
     align-items: center;
+    z-index: 1001;
 }
 
 .settings-icon-container,
@@ -378,11 +355,6 @@ button {
     transition: background-color 0.3s ease;
 }
 
-.settings-icon-container:hover,
-.reset-icon-container:hover {
-    background-color: rgba(255, 255, 255, 0.2);
-}
-
 .svg-icon {
     width: 24px;
     height: 24px;
@@ -394,4 +366,20 @@ button {
 .reset-icon-container:hover .svg-icon {
     transform: rotate(180deg);
     fill: #45a049;
+}
+
+/* Ajouter ces styles pour le numéro en surimpression */
+.element-number {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    background-color: rgba(0, 0, 0, 0.7);
+    color: #4CAF50;
+    padding: 5px 10px;
+    border-radius: 50%;
+    font-size: 18px;
+    font-weight: bold;
+    z-index: 10;
+    text-shadow: 0 0 5px rgba(0, 255, 0, 0.5);
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
 }

@@ -29,6 +29,7 @@ void HW_SendRsV3(uint8_t Command, uint8_t ExCommand, uint16_t NbData);
 const int MAX_DATA_LENGTH = 256;
 extern uint8_t SendRsData[MAX_DATA_LENGTH];
 extern uint8_t SendRsBuffer[MAX_DATA_LENGTH]; // Buffer pour les données à envoyer
+extern uint8_t LastCheckSum;
 
 void ClearSendRSBuff();
 

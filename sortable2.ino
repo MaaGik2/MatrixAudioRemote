@@ -117,45 +117,105 @@ void setup() {
 
     // Récupérer l'ordre des éléments de la liste 2
     JsonArray order = doc["order"];
-    String config = "";
-    String muteConfig = "";
+    
+    // Initialisation du muteConfig par défaut : chaque out_x sur in_x
+    String muteConfig = "11100100"; // "11 10 01 00" - Chaque canal bouclé sur lui-même
+                                   // out4->in4 (11)
+                                   // out3->in3 (10)
+                                   // out2->in2 (01)
+                                   // out1->in1 (00)
 
-    for (JsonVariant item : order) {
-      String effect = item.as<String>();
-      Serial.println(effect);
-
-      // Construire la configuration binaire en fonction de la table de vérité
-      if (effect == "1") config += "10", muteConfig += "11"; // Effet 1
-      else if (effect == "2") config += "01", muteConfig += "11"; // Effet 2
-      else if (effect == "3") config += "11", muteConfig += "11"; // Effet 3
+    // Réinitialiser l'état des LEDs
+    for(int i = 0; i < NUM_LEDS; i++) {
+        ledStates[i] = false;
+        digitalWrite(LED_PINS[i], LOW);
     }
 
-    // Compléter la configuration avec l'insert et mute pour les sorties non utilisées
-    config += "11"; // Bits pour l'insert (toujours actifs)
-    while (muteConfig.length() < 8) muteConfig += "00"; // Bits "00" pour les sorties mutées
+    // Si le rack de droite n'est pas vide, appliquer le routage spécifique
+    if (order.size() > 0) {
+        // Allumer les LEDs des effets utilisés
+        for(size_t i = 0; i < order.size(); i++) {
+            String effect = order[i].as<String>();
+            int effectNum = effect.toInt();
+            
+            if(effectNum > 0 && effectNum <= NUM_LEDS) {
+                ledStates[effectNum - 1] = true;
+                digitalWrite(LED_PINS[effectNum - 1], HIGH);
+            }
+        }
 
-    // Convertir les configurations binaires en octets
-    uint8_t presetConfigByte = strtol(config.c_str(), nullptr, 2);
-    uint8_t muteConfigByte = strtol(muteConfig.c_str(), nullptr, 2);
+        // Configurer le routage
+        String effect = order[0].as<String>();
+        int effectNum = effect.toInt();
+        
+        // Configurer out4_pc vers l'entrée du premier effet
+        switch(effectNum) {
+            case 1: // SPX (in1) : 00 pour out4
+                muteConfig.setCharAt(7, '0');
+                muteConfig.setCharAt(6, '0');
+                // Configurer la sortie de SPX vers in4_pc
+                muteConfig.setCharAt(1, '1');
+                muteConfig.setCharAt(0, '1');
+                break;
+            case 2: // DIGI (in2) : 01 pour out4
+                muteConfig.setCharAt(7, '0');
+                muteConfig.setCharAt(6, '1');
+                // Configurer la sortie de DIGI vers in4_pc
+                muteConfig.setCharAt(3, '1');
+                muteConfig.setCharAt(2, '1');
+                break;
+            case 3: // BBE (in3) : 10 pour out4
+                muteConfig.setCharAt(7, '1');
+                muteConfig.setCharAt(6, '0');
+                // Configurer la sortie de BBE vers in4_pc
+                muteConfig.setCharAt(5, '1');
+                muteConfig.setCharAt(4, '1');
+                break;
+        }
+    }
 
+    // Convertir la configuration binaire en octet
+    String reversedMuteConfig = "";
+    for(int i = 7; i >= 0; i--) {
+        reversedMuteConfig += muteConfig[i];
+    }
+    uint8_t muteConfigByte = strtol(reversedMuteConfig.c_str(), nullptr, 2);
 
+    // Debug: Afficher les valeurs
+    Serial.println("-------- Debug Values --------");
+    Serial.print("muteConfig (binary): ");
+    Serial.println(muteConfig);
+    Serial.print("reversedMuteConfig (binary): ");
+    Serial.println(reversedMuteConfig);
+    Serial.print("muteConfigByte (decimal): ");
+    Serial.println(muteConfigByte);
+    Serial.print("muteConfigByte (hex): 0x");
+    Serial.println(muteConfigByte, HEX);
+    Serial.println("--------------------------");
 
-    // Envoi de la commande GpiOUTChange (commande 21)
-    SendRsBuffer[0] = 1;  // Numéro
-    SendRsBuffer[1] = muteConfigByte;  // Configuration de mute
-    HW_SendRsV3(GpiOUTChange, 0, 2);
-
-    delay(200); // Délai entre les envois
-
-
-    
-
-    // Envoi de la commande NewPreset (commande 19)
+    // Envoi de la commande NewPreset
     SendRsBuffer[0] = 1;  // Numéro de preset
-    SendRsBuffer[1] = presetConfigByte;  // Configuration binaire
-    HW_SendRsV3(NewPreset, 0, 2);
+    SendRsBuffer[1] = muteConfigByte;  // Configuration binaire inversée
+ 
 
+ 
 
+     HW_SendRsV3(NewPreset, 0, 2);
+
+ // Afficher la trame complète avant l'envoi
+    Serial.println("Trame HW_SendRs complète (hex):");
+    Serial.print("Command: 0x");
+    Serial.println(NewPreset, HEX);
+    Serial.print("Data: ");
+    for(int i = 0; i < 10; i++) {
+        if(SendRsData[i] < 0x10) Serial.print("0"); // Ajoute un 0 pour les valeurs < 16
+        Serial.print(SendRsData[i], HEX);
+        Serial.print(" ");
+    }
+    Serial.println();
+    Serial.println("--------------------------");
+     Serial.println("LastCheckSum: 0x");
+     Serial.println(LastCheckSum, HEX);
 
     // Clignotement de la LED pour indiquer la réception
     blinkLED();
@@ -217,12 +277,19 @@ void setup() {
     request->send(200, "application/json", "{\"status\":\"success\", \"message\": \"Reset command sent\"}");
   });
 
+  // Configuration des pins LED
+  for(int i = 0; i < NUM_LEDS; i++) {
+    pinMode(LED_PINS[i], OUTPUT);
+    digitalWrite(LED_PINS[i], LOW);
+  }
+
   // Démarrer le serveur
   server.begin();
 }
 
 void loop() {
-  // Pas de code nécessaire dans la boucle principale
+  // La boucle reste vide car les LEDs sont maintenant contrôlées 
+  // par les événements de drag and drop
 }
 
 // Fonction pour faire clignoter la LED
