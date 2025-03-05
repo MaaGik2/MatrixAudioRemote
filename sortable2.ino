@@ -4,15 +4,21 @@
 #include "HW_SendRsV3.h"
 #include <ArduinoJson.h> // Utilisé pour traiter les données JSON
 
-const char* ssid = "KNET_34db_2.4Ghz";
-const char* password = "Coolight2016@Stpol@Ruche";
+const char* ssid = "Livebox-A0D0";
+const char* password = "eaVsfDpztiRnnChzCx";
 
 // LED sur GPIO2
 const int ledPin = 2;
 
 const int NUM_LEDS = 4;
+const int NUM_LEDS_MATRIXCONF = 8;
 const int LED_PINS[NUM_LEDS] = {15, 4, 22, 23};  // D2, D4, D22, D23
+const int LED_PINS_MATRIXCONF[NUM_LEDS_MATRIXCONF] = {13, 12, 14, 27, 26, 25, 33, 32};  // D2, D4, D22, D23
+
 bool ledStates[NUM_LEDS] = {false, false, false, false};
+bool ledStatesMatrixConf[NUM_LEDS_MATRIXCONF] = {false, false, false, false, false, false, false, false};
+
+
 unsigned long previousMillis = 0;
 const long interval = 100;  // Intervalle de 100ms entre chaque LED
 int currentLed = 0;
@@ -170,6 +176,20 @@ void setup() {
     SendRsBuffer[1] = muteConfigByte;
     HW_SendRsV3(NewPreset, 0, 2);
 
+    
+    // Mise à jour des LEDs de configuration Matrix
+    for(int i = 0; i < NUM_LEDS_MATRIXCONF; i++) {
+ 
+        if(muteConfigByte & (1 << i)) {
+            digitalWrite(LED_PINS_MATRIXCONF[i], HIGH);
+        } else {
+            digitalWrite(LED_PINS_MATRIXCONF[i], LOW);
+        }
+    }
+
+
+    
+
     // Afficher la trame complète avant l'envoi
     Serial.println("Trame HW_SendRs complète (hex):");
     Serial.print("Command: 0x");
@@ -249,6 +269,11 @@ void setup() {
   for(int i = 0; i < NUM_LEDS; i++) {
     pinMode(LED_PINS[i], OUTPUT);
     digitalWrite(LED_PINS[i], LOW);
+  }
+
+  // Configuration des pins LED en sortie
+  for(int i = 0; i < NUM_LEDS_MATRIXCONF; i++) {
+    pinMode(LED_PINS_MATRIXCONF[i], OUTPUT);
   }
 
   // Démarrer le serveur
