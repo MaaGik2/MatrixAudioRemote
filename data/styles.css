@@ -332,10 +332,11 @@ button {
 
 /* Modifier les styles des contrôles d'en-tête */
 .header-controls {
-    position: fixed;
+   /* position: fixed; */
+    display: flex;
     top: 20px;
     left: 20px;
-    display: flex;
+   /* display: flex;  */
     gap: 20px;
     align-items: center;
     z-index: 1001;
