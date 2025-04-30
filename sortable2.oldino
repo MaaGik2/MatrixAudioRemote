@@ -38,6 +38,113 @@ struct EffectConfig {
     uint8_t muteConfig;
 };
 
+// Structure pour stocker l'état complet
+struct StateConfig {
+    uint8_t muteConfigByte;
+    bool ledStates[NUM_LEDS];
+    bool ledStatesMatrixConf[NUM_LEDS_MATRIXCONF];
+};
+
+// Fonction pour sauvegarder la configuration complète
+void saveState(uint8_t muteConfigByte, bool ledStates[], bool ledStatesMatrixConf[]) {
+    StateConfig state;
+    state.muteConfigByte = muteConfigByte;
+    memcpy(state.ledStates, ledStates, sizeof(bool) * NUM_LEDS);
+    memcpy(state.ledStatesMatrixConf, ledStatesMatrixConf, sizeof(bool) * NUM_LEDS_MATRIXCONF);
+
+    // Debug: Afficher les données avant la sauvegarde
+    Serial.println("\n--- Sauvegarde de l'état ---");
+    Serial.print("muteConfigByte: 0x");
+    Serial.println(muteConfigByte, HEX);
+    
+    Serial.println("États des LEDs principales:");
+    for(int i = 0; i < NUM_LEDS; i++) {
+        Serial.print("LED ");
+        Serial.print(i + 1);
+        Serial.print(": ");
+        Serial.println(state.ledStates[i] ? "ON" : "OFF");
+    }
+    
+    Serial.println("États des LEDs Matrix:");
+    for(int i = 0; i < NUM_LEDS_MATRIXCONF; i++) {
+        Serial.print("LED Matrix ");
+        Serial.print(i);
+        Serial.print(": ");
+        Serial.println(state.ledStatesMatrixConf[i] ? "ON" : "OFF");
+    }
+
+    File file = SPIFFS.open("/state_config.bin", "w");
+    if(!file) {
+        Serial.println("Erreur lors de l'ouverture du fichier en écriture");
+        return;
+    }
+
+    size_t bytesWritten = file.write((uint8_t*)&state, sizeof(StateConfig));
+    file.close();
+
+    if(bytesWritten == sizeof(StateConfig)) {
+        Serial.print("Configuration complète sauvegardée (");
+        Serial.print(bytesWritten);
+        Serial.println(" octets)");
+    } else {
+        Serial.println("Erreur lors de la sauvegarde: nombre d'octets incorrect");
+    }
+    Serial.println("---------------------------\n");
+}
+
+// Fonction pour charger la configuration complète
+StateConfig loadState() {
+    StateConfig state;
+    // Valeurs par défaut
+    state.muteConfigByte = 0b11100100;
+    memset(state.ledStates, 0, sizeof(bool) * NUM_LEDS);
+    memset(state.ledStatesMatrixConf, 0, sizeof(bool) * NUM_LEDS_MATRIXCONF);
+
+    File file = SPIFFS.open("/state_config.bin", "r");
+    if(!file) {
+        Serial.println("Aucune configuration trouvée, utilisation des valeurs par défaut");
+        return state;
+    }
+
+    size_t bytesRead = file.read((uint8_t*)&state, sizeof(StateConfig));
+    file.close();
+
+    if(bytesRead == sizeof(StateConfig)) {
+        Serial.println("\n--- Chargement de l'état ---");
+        Serial.print("Configuration chargée (");
+        Serial.print(bytesRead);
+        Serial.println(" octets)");
+        
+        Serial.print("muteConfigByte: 0x");
+        Serial.println(state.muteConfigByte, HEX);
+        
+        Serial.println("États des LEDs principales:");
+        for(int i = 0; i < NUM_LEDS; i++) {
+            Serial.print("LED ");
+            Serial.print(i + 1);
+            Serial.print(": ");
+            Serial.println(state.ledStates[i] ? "ON" : "OFF");
+        }
+        
+        Serial.println("États des LEDs Matrix:");
+        for(int i = 0; i < NUM_LEDS_MATRIXCONF; i++) {
+            Serial.print("LED Matrix ");
+            Serial.print(i);
+            Serial.print(": ");
+            Serial.println(state.ledStatesMatrixConf[i] ? "ON" : "OFF");
+        }
+        Serial.println("---------------------------\n");
+    } else {
+        Serial.println("Erreur lors du chargement: nombre d'octets incorrect");
+        // Utiliser les valeurs par défaut en cas d'erreur
+        state.muteConfigByte = 0b11100100;
+        memset(state.ledStates, 0, sizeof(bool) * NUM_LEDS);
+        memset(state.ledStatesMatrixConf, 0, sizeof(bool) * NUM_LEDS_MATRIXCONF);
+    }
+
+    return state;
+}
+
 // Fonction pour sauvegarder la configuration mute
 void saveMuteConfig(uint8_t muteConfigByte) {
     File file = SPIFFS.open("/mute_config.bin", "w");
@@ -93,7 +200,7 @@ void setup() {
     pinMode(ledPin, OUTPUT);
     digitalWrite(ledPin, LOW);  // Éteindre la LED au départ
 
-        // Configuration des pins LED
+    // Configuration des pins LED
     for(int i = 0; i < NUM_LEDS; i++) {
         pinMode(LED_PINS[i], OUTPUT);
         digitalWrite(LED_PINS[i], LOW);
@@ -114,22 +221,26 @@ void setup() {
         return;
     }
 
-    // Charger la configuration mute
-    uint8_t muteConfigByte = loadMuteConfig();
+    // Charger la configuration complète
+    StateConfig state = loadState();
     
-    // Appliquer la configuration chargée
-    SendRsBuffer[0] = 1;  // Numéro de preset
-    SendRsBuffer[1] = muteConfigByte;
-    HW_SendRsV3(NewPreset, 0, 2);
-
-    // Mise à jour des LEDs de configuration Matrix avec la configuration chargée
-    for(int i = 0; i < NUM_LEDS_MATRIXCONF; i++) {
-        if(muteConfigByte & (1 << i)) {
-            digitalWrite(LED_PINS_MATRIXCONF[i], HIGH);
-        } else {
-            digitalWrite(LED_PINS_MATRIXCONF[i], LOW);
-        }
+    // Restaurer les états des LEDs
+    memcpy(ledStates, state.ledStates, sizeof(bool) * NUM_LEDS);
+    memcpy(ledStatesMatrixConf, state.ledStatesMatrixConf, sizeof(bool) * NUM_LEDS_MATRIXCONF);
+    
+    // Appliquer les états des LEDs
+    for(int i = 0; i < NUM_LEDS; i++) {
+        digitalWrite(LED_PINS[i], ledStates[i] ? HIGH : LOW);
     }
+    
+    for(int i = 0; i < NUM_LEDS_MATRIXCONF; i++) {
+        digitalWrite(LED_PINS_MATRIXCONF[i], ledStatesMatrixConf[i] ? HIGH : LOW);
+    }
+
+    // Appliquer la configuration mute
+    SendRsBuffer[0] = 1;  // Numéro de preset
+    SendRsBuffer[1] = state.muteConfigByte;
+    HW_SendRsV3(NewPreset, 0, 2);
 
     // Connexion au WiFi
     WiFi.begin(ssid, password);
@@ -221,32 +332,38 @@ void setup() {
         // Obtenir la configuration depuis updateEffects
         uint8_t muteConfigByte = updateEffects(order);
 
-        // Debug: Afficher les valeurs
-        Serial.println("-------- Debug Values --------");
-        Serial.print("muteConfigByte (decimal): ");
-        Serial.println(muteConfigByte);
-        Serial.print("muteConfigByte (hex): 0x");
-        Serial.println(muteConfigByte, HEX);
-        Serial.println("--------------------------");
+        // Debug: Afficher l'état des LEDs avant la mise à jour Matrix
+        Serial.println("État des LEDs principales:");
+        for(int i = 0; i < NUM_LEDS; i++) {
+            Serial.print("LED ");
+            Serial.print(i + 1);
+            Serial.print(": ");
+            Serial.println(ledStates[i] ? "ON" : "OFF");
+        }
 
-        // Sauvegarder la configuration
-        saveMuteConfig(muteConfigByte);
+        // Mise à jour des LEDs de configuration Matrix
+        Serial.println("Mise à jour des LEDs Matrix:");
+        for(int i = 0; i < NUM_LEDS_MATRIXCONF; i++) {
+            ledStatesMatrixConf[i] = (muteConfigByte & (1 << i)) != 0;
+            digitalWrite(LED_PINS_MATRIXCONF[i], ledStatesMatrixConf[i] ? HIGH : LOW);
+            Serial.print("LED Matrix ");
+            Serial.print(i);
+            Serial.print(": ");
+            Serial.println(ledStatesMatrixConf[i] ? "ON" : "OFF");
+        }
+
+        // Debug: Afficher les données avant la sauvegarde
+        Serial.println("Données à sauvegarder:");
+        Serial.print("muteConfigByte: 0x");
+        Serial.println(muteConfigByte, HEX);
+
+        // Sauvegarder la configuration complète
+        saveState(muteConfigByte, ledStates, ledStatesMatrixConf);
 
         // Envoi de la commande NewPreset
         SendRsBuffer[0] = 1;  // Numéro de preset
         SendRsBuffer[1] = muteConfigByte;
         HW_SendRsV3(NewPreset, 0, 2);
-
-        
-        // Mise à jour des LEDs de configuration Matrix
-        for(int i = 0; i < NUM_LEDS_MATRIXCONF; i++) {
-            if(muteConfigByte & (1 << i)) {
-                digitalWrite(LED_PINS_MATRIXCONF[i], HIGH);
-            } else {
-                digitalWrite(LED_PINS_MATRIXCONF[i], LOW);
-            }
-        }
-
 
         // Afficher la trame complète avant l'envoi
         Serial.println("Trame HW_SendRs complète (hex):");
@@ -316,18 +433,34 @@ void setup() {
     server.on("/reset", HTTP_POST, [](AsyncWebServerRequest * request) {
         Serial.println("Reset command received");
 
+        // Réinitialiser les états des LEDs
+        for(int i = 0; i < NUM_LEDS; i++) {
+            ledStates[i] = false;
+            digitalWrite(LED_PINS[i], LOW);
+        }
+        
+        // Réinitialiser les LEDs Matrix avec la configuration par défaut
+        uint8_t defaultMuteConfig = 0b11100100;
+        for(int i = 0; i < NUM_LEDS_MATRIXCONF; i++) {
+            ledStatesMatrixConf[i] = (defaultMuteConfig & (1 << i)) != 0;
+            digitalWrite(LED_PINS_MATRIXCONF[i], ledStatesMatrixConf[i] ? HIGH : LOW);
+        }
+
+        // Sauvegarder l'état réinitialisé
+        saveState(defaultMuteConfig, ledStates, ledStatesMatrixConf);
+
         // Prépare le buffer pour la commande de reset
-        SendRsBuffer[0] = 0;  // Optionnel, selon les spécifications du reset
+        SendRsBuffer[0] = 0;
         HW_SendRsV3(Reset, 0, 0);
+
+        // Répondre à la requête pour indiquer que la commande a été envoyée
+        request->send(200, "application/json", "{\"status\":\"success\", \"message\": \"Reset command sent\"}");
 
         // Attendre 1 seconde avant le reset
         delay(1000);
 
         // Reset de l'ESP
         ESP.restart();
-
-        // Répondre à la requête pour indiquer que la commande a été envoyée
-        request->send(200, "application/json", "{\"status\":\"success\", \"message\": \"Reset command sent\"}");
     });
 
     // Démarrer le serveur
@@ -379,15 +512,35 @@ uint8_t updateEffects(const JsonArray& order) {
         digitalWrite(LED_PINS[i], LOW);
     }
     
+    // Debug: Afficher l'ordre reçu
+    Serial.println("Ordre des effets reçu:");
+    for(JsonVariant v : order) {
+        Serial.print("Effet: ");
+        Serial.println(v.as<String>());
+    }
+    
     // Allumer les LEDs des effets utilisés
     for(JsonVariant v : order) {
         int effectNum = v.as<String>().toInt();
         if(effectNum > 0 && effectNum <= NUM_LEDS) {
+            Serial.print("Activation LED pour effet ");
+            Serial.println(effectNum);
             ledStates[effectNum - 1] = true;
             digitalWrite(LED_PINS[effectNum - 1], HIGH);
         }
     }
     
-    // Obtenir et retourner la configuration de routage
-    return getMuteConfig(order);
+    // Debug: Afficher l'état final des LEDs
+    Serial.println("État final des LEDs:");
+    for(int i = 0; i < NUM_LEDS; i++) {
+        Serial.print("LED ");
+        Serial.print(i + 1);
+        Serial.print(": ");
+        Serial.println(ledStates[i] ? "ON" : "OFF");
+    }
+    
+    // Obtenir la configuration de routage
+    uint8_t muteConfig = getMuteConfig(order);
+    
+    return muteConfig;
 }
