@@ -16,6 +16,7 @@ Thumbs.db
 # Fichiers de configuration IDE
 .vscode/
 .idea/
+.pio/
 
 # Fichiers temporaires
 *.tmp
