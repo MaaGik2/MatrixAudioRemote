@@ -3,7 +3,7 @@
 ![Schéma de développement](images/dev.jpg)
 
 ## Description
-Ce projet implémente un contrôleur audio pour le matériel Matrix utilisant un ESP32. Il permet de gérer les effets audio, les presets et offre une interface web pour le contrôle à distance.
+Ce projet utilise un ESP32 pour gérer une matrice audio programmable, permettant de router des effets audio externes de manière dynamique. L’interface utilisateur est accessible via un serveur web intégré, et les configurations d’effets sont envoyées en temps réel à l’ESP32 pour contrôler les entrées et sorties audio.
 
 ## Fonctionnalités
 - Communication série bidirectionnelle avec le matériel Matrix (9600 bauds)
